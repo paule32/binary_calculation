@@ -42,6 +42,56 @@ enum math_ops : char {
 };
 math_ops math_op;
 
+struct {
+    std::string binary;
+    std::string hexadec;
+    std::string decimal;
+    std::string octal;
+} sw_system[] = {
+    "0000", "0",  "0", "",
+    "0001", "1",  "1", "",
+    "0010", "2",  "2", "",
+    "0011", "3",  "3", "",
+    "0100", "4",  "4", "",
+    "0101", "5",  "5", "",
+    "0110", "6",  "6", "",
+    "0111", "7",  "7", "",
+    "1000", "8",  "8", "",
+    "1001", "9",  "9", "",
+    "1010", "a", "10", "",
+    "1011", "b", "11", "",
+    "1100", "c", "12", "",
+    "1101", "d", "13", "",
+    "1110", "e", "14", "",
+    "1111", "f", "15", ""
+};
+
+std::string getBinaryNumber(std::string num)
+{
+    std::string tmp = "ssss";
+
+    // binary ?
+    if ((num.size() > 0) && (num.size() < 5)) {
+        return num;
+    }   else
+    // dezimal ?
+    if ((num.size() > 0) && (num.size() < 3)) {
+        uint8_t idx = std::atoi(num.c_str());
+        return sw_system[idx].binary;
+    }   else {
+        std::cout << "Format nicht erkannt !" << std::endl;
+        return "";
+    }
+    
+    return tmp;
+}
+
+std::string getHexNumber(std::string num)
+{
+    uint8_t idx = std::atoi(num.c_str());
+    return sw_system[idx].hexadec;
+}
+
 int main(int argc, char **argv)
 {
     std::cout << std::endl << "binäres rechnen (c) 2020 Jens Kallup";
@@ -77,8 +127,22 @@ int main(int argc, char **argv)
     std::fill(lhs.begin(),lhs.end(),'0');
     std::fill(rhs.begin(),rhs.end(),'0');
 
-    std::cout << "A = " << argv[2] << std::endl;
-    std::cout << "B = " << argv[3] << std::endl << std::endl;
+    std::cout << " A = " << argv[2] << std::endl;
+    std::cout << " B = " << argv[3] << std::endl << std::endl;
+    
+    std::string lhs_a = getBinaryNumber(argv[2]);
+    std::string rhs_b = getBinaryNumber(argv[3]);
+    
+    if (lhs_a.size() < 1) { std::cout << " Wert A ist falsch !" << std::endl; return 1; }
+    if (rhs_b.size() < 1) { std::cout << " Wert B ist falsch !" << std::endl; return 1; }
+    
+    std::cout << " A (bin)  = " << lhs_a << std::endl;
+    std::cout << " B (bin)  = " << rhs_b << std::endl;
+    std::cout << std::endl;
+    
+    std::cout << " A (hex)  = " << getHexNumber(argv[2]) << " --> 0x" << getHexNumber(argv[2]) << std::endl;
+    std::cout << " B (hex)  = " << getHexNumber(argv[3]) << " --> 0x" << getHexNumber(argv[3]) << std::endl;
+    std::cout << std::endl;
     
     std::cout << "        A =";
     for (std::vector<uint8_t>::iterator it = lhs.begin(); it != lhs.end(); ++it)
