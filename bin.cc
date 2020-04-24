@@ -1,6 +1,4 @@
 // ------------------------------------------------------------------------------
-// dBase4Linux 1.0
-// RDP - Rapid Database Programming
 //
 // (c) 2015-2020 Jens Kallup
 // MIT License
@@ -32,142 +30,267 @@
 
 # include <iostream>    // std::cout
 # include <algorithm>   // std::fill
+# include <iomanip>
+# include <string>
+# include <bitset>
+# include <sstream>
 # include <vector>      // std::vector
+# include <unordered_map>
+# include <map>
+# include <typeindex>
+# include <type_traits>
 
-enum math_ops : char {
-    _add_ = '+',
-    _sub_ = '-',
-    _mul_ = '*',
-    _div_ = '/'
-};
-math_ops math_op;
+static char math_op;
 
-struct {
-    std::string binary;
-    std::string hexadec;
-    std::string decimal;
-    std::string octal;
-} sw_system[] = {
-    "0000", "0",  "0", "",
-    "0001", "1",  "1", "",
-    "0010", "2",  "2", "",
-    "0011", "3",  "3", "",
-    "0100", "4",  "4", "",
-    "0101", "5",  "5", "",
-    "0110", "6",  "6", "",
-    "0111", "7",  "7", "",
-    "1000", "8",  "8", "",
-    "1001", "9",  "9", "",
-    "1010", "a", "10", "",
-    "1011", "b", "11", "",
-    "1100", "c", "12", "",
-    "1101", "d", "13", "",
-    "1110", "e", "14", "",
-    "1111", "f", "15", ""
-};
+namespace kallup {
+    using namespace std;
+    unordered_map<type_index,string> types_map;
 
-std::string getBinaryNumber(std::string num)
-{
-    std::string tmp = "ssss";
-
-    // binary ?
-    if ((num.size() > 0) && (num.size() < 5)) {
-        return num;
-    }   else
-    // dezimal ?
-    if ((num.size() > 0) && (num.size() < 3)) {
-        uint8_t idx = std::atoi(num.c_str());
-        return sw_system[idx].binary;
-    }   else {
-        std::cout << "Format nicht erkannt !" << std::endl;
-        return "";
-    }
+    class Integer {
+    public:
+        Integer(int) { }
+    };
+    class Float {
+    public:
+    };
+    class String {
+    public:
+    };
     
-    return tmp;
+    template <typename T1, typename T2, uint32_t max = 10>
+    class BinaryCalc {
+    public:
+        BinaryCalc();
+        BinaryCalc(const T1 a, const T2 b);
+        
+        string add(const T1 a, const T2 b);
+        string sub(const T1 a, const T2 b);
+        string mul(const T1 a, const T2 b);
+        string div(const T1 a, const T2 b);
+        
+        string getResult() const;
+    };
 }
 
-std::string getHexNumber(std::string num)
+namespace kallup {
+    using namespace std;
+    static bool  initialized = false;
+    stringstream sum_bits,LHA,LHB;
+    uint32_t     prec_len = 20;
+    
+    void init()
+    {
+        #define TYPES_MAP(t) \
+        types_map[typeid(t)] = #t
+        
+        TYPES_MAP(int  );
+        TYPES_MAP(uint8_t );
+        TYPES_MAP(uint16_t);
+        TYPES_MAP(uint32_t);
+        TYPES_MAP(uint64_t);
+
+        TYPES_MAP(float);
+        
+        TYPES_MAP(Integer);
+        TYPES_MAP(Float);
+        TYPES_MAP(String);
+        
+        initialized = true;
+    }
+    template <typename T1, typename T2, uint32_t max>
+    BinaryCalc<T1,T2,max>::BinaryCalc() {
+        if (!initialized) {
+            init();
+            initialized = true;
+            prec_len = max;
+            sum_bits.clear();
+        }
+    }
+    template <typename T1, typename T2, uint32_t max>
+    string BinaryCalc<T1,T2,max>::getResult() const {
+        if (sum_bits.str().size() < 1)
+        return "0";  else
+        return sum_bits.str();
+    }
+    
+    
+    int getBit(string s, int index)
+    {
+         if(index >= 0)   return (s[index] - '0');
+         else             return 0;
+    }
+
+    string addBinary(string a, string b) 
+    {
+        if(a.size() > b.size())        while(a.size() > b.size()) b = "0" + b;
+        else if(b.size() > a.size())   while(b.size() > a.size()) a = "0" + a;
+
+        int l = max(a.size()-1, b.size() - 1);
+
+        string result = ""; 
+        int s=0;        
+
+        while(l >= 0 || s == 1)
+        {
+            s      += getBit(a, l) + getBit(b, l);
+            result  = char(s % 2 + '0') + result;
+            s      /= 2;
+            l--;
+        }
+        return result;
+    }
+    
+
+    string str2bin(string a)
+    {
+        vector<string> bin;
+        string bis;
+        for (int idx = a.size(); idx >= 0; --idx)     {
+            switch (a[idx]) {
+                case '0':           bis = "0000"; break;
+                case '1':           bis = "0001"; break;
+                case '2':           bis = "0010"; break;
+                case '3':           bis = "0011"; break;
+                case '4':           bis = "0100"; break;
+                case '5':           bis = "0101"; break;
+                case '6':           bis = "0110"; break;
+                case '7':           bis = "0111"; break;
+                case '8':           bis = "1000"; break;
+                case '9':           bis = "1001"; break;
+
+                case 'a': case 'A': bis = "1010"; break;
+                case 'b': case 'B': bis = "1011"; break;
+                case 'c': case 'C': bis = "1100"; break;
+                case 'd': case 'D': bis = "1101"; break;
+                case 'e': case 'E': bis = "1110"; break;
+                case 'f': case 'F': bis = "1111"; break;
+            }
+            bin.push_back(bis);
+        }
+        
+        reverse(bin.begin(),bin.end());
+        string bin_str;
+        
+        for (const auto &chr: bin)
+        bin_str += chr;
+        
+        return bin_str;
+    }
+    
+    template <typename T1, typename T2>
+    string getAdd(
+        const T1 ta,
+        const T2 tb) {
+        
+        string lha,lhb;
+        
+        lha = str2bin(ta);
+        lhb = str2bin(tb);
+        
+        return addBinary(lha,lhb);
+    }
+
+    template <typename T1, typename T2, uint32_t max>
+    BinaryCalc<T1,T2,max>::BinaryCalc(const T1 a, const T2 b) {
+        if (!initialized) {
+            init();
+            initialized = true;
+            prec_len = max;
+            sum_bits.clear();
+        }
+        sum_bits << getAdd(a,b);
+    }
+
+    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::add(const T1 a, const T2 b) { return getAdd(a,b); }
+    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::sub(const T1 a, const T2 b) { return getSub(a,b); }
+    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::mul(const T1 a, const T2 b) { return getMul(a,b); }
+    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::div(const T1 a, const T2 b) { return getDiv(a,b); }    
+}
+
+static int prec_len = 20;
+
+std::string addStr2Bin(std::string A, std::string B)
 {
-    uint8_t idx = std::atoi(num.c_str());
-    return sw_system[idx].hexadec;
+    using namespace kallup;
+    using namespace std;
+       
+    BinaryCalc < string,string > calcu(A,B);
+    
+    stringstream tmp;
+    tmp << calcu.getResult();
+    return tmp.str();
+}
+
+inline void put_str1(char t1, std::string t2)
+{
+    using namespace std;
+    cout << "        " << t1 << " =";
+    for (size_t  l = 0; l <
+        t2.size(); ++l)
+        cout << " " << t2[l];
+    cout << endl;
+}
+
+inline void put_str2(char t1)
+{
+    using namespace std;
+    for (int l = 0; l < 50; ++l)
+        cout << t1;
+        cout << endl;
 }
 
 int main(int argc, char **argv)
 {
-    std::cout << std::endl << "binäres rechnen (c) 2020 Jens Kallup";
-    std::cout << std::endl << "Argumente:";
-    std::cout << std::endl << "arg1: add | sub | mul | div";
-    std::cout << std::endl << "arg2: nummer1";
-    std::cout << std::endl << "arg3: nummer2";
-    std::cout << std::endl << std::endl;
+    using namespace std;
+    using namespace kallup;
+    cout << endl << "binäres rechnen (c) 2020 Jens Kallup"
+         << endl << "Argumente:"
+         << endl << "arg1: add | sub | mul | div"
+         << endl << "arg2: nummer1"
+         << endl << "arg3: nummer2"
+         << endl << endl;
     
     if (argc < 3) {
-        std::cout << "Argumentliste für Programmstart falsch !" << std::endl;
-        std::cout << "Benutzung wie folgt:"    << std::endl;
-        std::cout << "bin.exe <op> <Zahl1> <Zahl2>" << std::endl << std::endl;
-        std::cout << "Programm wird beendet."  << std::endl;
+        cout << "Argumentliste für Programmstart falsch !"  << endl
+             << "Benutzung wie folgt:"                      << endl
+             << "bin.exe <op> <Zahl1> <Zahl2>"              << endl
+                                                            << endl
+             << "Programm wird beendet."                    << endl;
         return 1;
     }
     
-    if (!strcmp(argv[1],"add")) { math_op = math_ops::_add_; std::cout << "binäre Addition ";       } else
-    if (!strcmp(argv[1],"sub")) { math_op = math_ops::_sub_; std::cout << "binäre Subtrahieren ";   } else
-    if (!strcmp(argv[1],"mul")) { math_op = math_ops::_mul_; std::cout << "binäre Multiplizieren "; } else
-    if (!strcmp(argv[1],"div")) { math_op = math_ops::_div_; std::cout << "binäre Dividieren ";     } else
+    string arg1 = argv[1];
+    
+    if (arg1 == "add") { math_op = '+'; cout << "binäre Addition ";       } else
+    if (arg1 == "sub") { math_op = '-'; cout << "binäre Subtrahieren ";   } else
+    if (arg1 == "mul") { math_op = '*'; cout << "binäre Multiplizieren "; } else
+    if (arg1 == "div") { math_op = '/'; cout << "binäre Dividieren ";     } else
     {
-        std::cout << "Achtung: argument 1 wurde nicht erkannt !" << std::endl;
-        std::cout << "Programm wird beendet.";
+        cout << "Achtung: argument 1 wurde nicht erkannt !" << endl
+             << "Programm wird beendet.";
         return 1;
     }
     
-    std::cout << "zweier _nicht_ negativen Zahlen:" << std::endl;
+    cout << "zweier _nicht_ negativen Zahlen:" << endl;
     
-    std::vector<uint8_t> lhs(20);
-    std::vector<uint8_t> rhs(20);
-    
-    std::fill(lhs.begin(),lhs.end(),'0');
-    std::fill(rhs.begin(),rhs.end(),'0');
+    string bs_A = str2bin(argv[2]);
+    string bs_B = str2bin(argv[3]);
+   
+    cout << " A (hex)  = " << hex << argv[2] << " --> 0x" << hex << argv[2] << std::endl
+         << " B (hex)  = " << hex << argv[3] << " --> 0x" << hex << argv[3] << std::endl
+         << std::endl;
 
-    std::cout << " A = " << argv[2] << std::endl;
-    std::cout << " B = " << argv[3] << std::endl << std::endl;
+    put_str1('A',bs_A);
+    put_str1('B',bs_B);
     
-    std::string lhs_a = getBinaryNumber(argv[2]);
-    std::string rhs_b = getBinaryNumber(argv[3]);
+    put_str2('-'); cout << " Ergebnis =";
     
-    if (lhs_a.size() < 1) { std::cout << " Wert A ist falsch !" << std::endl; return 1; }
-    if (rhs_b.size() < 1) { std::cout << " Wert B ist falsch !" << std::endl; return 1; }
+    string bin_sum = addStr2Bin(argv[2],argv[3]);
+    for (int s = 0; s < bin_sum.size(); ++s)
+    cout << " " << bin_sum[s];
+    cout << endl;
     
-    std::cout << " A (bin)  = " << lhs_a << std::endl;
-    std::cout << " B (bin)  = " << rhs_b << std::endl;
-    std::cout << std::endl;
-    
-    std::cout << " A (hex)  = " << getHexNumber(argv[2]) << " --> 0x" << getHexNumber(argv[2]) << std::endl;
-    std::cout << " B (hex)  = " << getHexNumber(argv[3]) << " --> 0x" << getHexNumber(argv[3]) << std::endl;
-    std::cout << std::endl;
-    
-    std::cout << "        A =";
-    for (std::vector<uint8_t>::iterator it = lhs.begin(); it != lhs.end(); ++it)
-    std::cout << " " << *it;
-    std::cout << std::endl;
-    
-    std::cout << "        B =";
-    for (std::vector<uint8_t>::iterator it = rhs.begin(); it != rhs.end(); ++it)
-    std::cout << " " << *it;
-    std::cout << std::endl << std::endl;
-    
-    std::cout << "   Merker =";
-    for (int l = 0; l < 20; ++l);
-    
-    std::cout << std::endl << " ";
-    for (int l = 0; l < 50; ++l)
-    std::cout << "-";
-    std::cout << std::endl;
-    
-    std::cout << " Ergebnis =";
-    std::cout << std::endl << " ";
-    
-    for (int l = 0; l < 50; ++l)
-    std::cout << "=";
-    std::cout << std::endl;
+    put_str2('=');    
     
     return 0;
 }
