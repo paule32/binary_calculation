@@ -40,6 +40,7 @@
 # include <typeindex>
 # include <type_traits>
 
+using namespace std;
 static char math_op;
 
 namespace kallup {
@@ -57,7 +58,7 @@ namespace kallup {
     public:
     };
     
-    template <typename T1, typename T2, uint32_t max = 10>
+    template <typename T1, typename T2, uint32_t max = 8>
     class BinaryCalc {
     public:
         BinaryCalc();
@@ -68,7 +69,12 @@ namespace kallup {
         string mul(const T1 a, const T2 b);
         string div(const T1 a, const T2 b);
         
-        string getResult() const;
+        string add();
+        string sub();
+        string mul();
+        string div();
+        
+        string result() const;
     };
 }
 
@@ -76,6 +82,10 @@ namespace kallup {
     using namespace std;
     static bool  initialized = false;
     stringstream sum_bits,LHA,LHB;
+    char         _a[64],_b[64],_c[64];
+    uint32_t     _m;
+    uint8_t      _cary;
+    
     uint32_t     prec_len = 20;
     
     void init()
@@ -95,6 +105,13 @@ namespace kallup {
         TYPES_MAP(Float);
         TYPES_MAP(String);
         
+        _cary = '0';
+        for (int i = 0; i < prec_len; ++i) {
+            _a[i] = '0';
+            _b[i] = '0';
+            _c[i] = '0';
+        }
+        
         initialized = true;
     }
     template <typename T1, typename T2, uint32_t max>
@@ -104,42 +121,12 @@ namespace kallup {
             initialized = true;
             prec_len = max;
             sum_bits.clear();
+            LHA << "0";
+            LHB << "0";
         }
     }
     template <typename T1, typename T2, uint32_t max>
-    string BinaryCalc<T1,T2,max>::getResult() const {
-        if (sum_bits.str().size() < 1)
-        return "0";  else
-        return sum_bits.str();
-    }
-    
-    
-    int getBit(string s, int index)
-    {
-         if(index >= 0)   return (s[index] - '0');
-         else             return 0;
-    }
-
-    string addBinary(string a, string b) 
-    {
-        if(a.size() > b.size())        while(a.size() > b.size()) b = "0" + b;
-        else if(b.size() > a.size())   while(b.size() > a.size()) a = "0" + a;
-
-        int l = max(a.size()-1, b.size() - 1);
-
-        string result = ""; 
-        int s=0;        
-
-        while(l >= 0 || s == 1)
-        {
-            s      += getBit(a, l) + getBit(b, l);
-            result  = char(s % 2 + '0') + result;
-            s      /= 2;
-            l--;
-        }
-        return result;
-    }
-    
+    string BinaryCalc<T1,T2,max>::result() const { return _c; }
 
     string str2bin(string a)
     {
@@ -168,27 +155,98 @@ namespace kallup {
             bin.push_back(bis);
         }
         
-        reverse(bin.begin(),bin.end());
         string bin_str;
-        
         for (const auto &chr: bin)
         bin_str += chr;
         
         return bin_str;
     }
     
+    void _com();
+    void _add();
+    
+    void _sub()
+    {
+        _m = 1;
+        _com();
+        _add();
+    }
+    void _com()
+    {
+        int count = 0;
+        for (int i = prec_len; i >= 0; i--) {
+            if (count > 0) {
+                if (_b[i] == '1')
+               _b[i] = '0'; else
+               _b[i] = '1';
+            }
+            if (_b[i] == '1') {
+                count++;
+            }
+        }
+    }
+    void _add()
+    {
+        for (int i = prec_len; i >= 0; i--) {
+            if (_cary == '0' && _a[i] == '0' && _b[i] == '0') { _cary = '0'; _c[i] = '0'; } else
+            if (_cary == '0' && _a[i] == '0' && _b[i] == '1') { _cary = '0'; _c[i] = '1'; } else
+            if (_cary == '0' && _a[i] == '1' && _b[i] == '0') { _cary = '0'; _c[i] = '1'; } else
+            if (_cary == '0' && _a[i] == '1' && _b[i] == '1') { _cary = '1'; _c[i] = '0'; } else
+            if (_cary == '1' && _a[i] == '1' && _b[i] == '1') { _cary = '1'; _c[i] = '1'; } else
+            if (_cary == '1' && _a[i] == '0' && _b[i] == '0') { _cary = '0'; _c[i] = '1'; } else
+            if (_cary == '1' && _a[i] == '0' && _b[i] == '1') { _cary = '1'; _c[i] = '0'; } else
+            if (_cary == '1' && _a[i] == '1' && _b[i] == '0') { _cary = '1'; _c[i] = '0'; } else
+            if (_cary == '1' && _a[i] == '1' && _b[i] == '1') { _cary = '1'; _c[i] = '1'; }
+        }
+    }
+
     template <typename T1, typename T2>
     string getAdd(
         const T1 ta,
         const T2 tb) {
+
+        string lha(ta);
+        string lhb(tb);
         
-        string lha,lhb;
-        
-        lha = str2bin(ta);
-        lhb = str2bin(tb);
-        
-        return addBinary(lha,lhb);
+        for (int i = 0; i < prec_len; ++i) {
+            _a[i] = lha[i];
+            _b[i] = lhb[i];
+        }
+
+        _add();
+        return _c;
     }
+
+    template <typename T1, typename T2>
+    string getSub(
+        const T1 ta,
+        const T2 tb) {
+
+        string lha(ta);
+        string lhb(tb);
+        
+        for (int i = 0; i < prec_len; ++i) {
+            _a[i] = lha[i];
+            _b[i] = lhb[i];
+        }
+        
+        _sub();
+        return _c;
+    }
+    
+    template <typename T1, typename T2>
+    string getMul(
+        const T1 ta,
+        const T2 tb) {
+        return "";
+    }
+    
+    template <typename T1, typename T2>
+    string getDiv(
+        const T1 ta,
+        const T2 tb) {
+        return "";
+    }    
 
     template <typename T1, typename T2, uint32_t max>
     BinaryCalc<T1,T2,max>::BinaryCalc(const T1 a, const T2 b) {
@@ -197,30 +255,24 @@ namespace kallup {
             initialized = true;
             prec_len = max;
             sum_bits.clear();
+            LHA << a;
+            LHB << b;
         }
-        sum_bits << getAdd(a,b);
     }
 
     template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::add(const T1 a, const T2 b) { return getAdd(a,b); }
     template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::sub(const T1 a, const T2 b) { return getSub(a,b); }
     template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::mul(const T1 a, const T2 b) { return getMul(a,b); }
-    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::div(const T1 a, const T2 b) { return getDiv(a,b); }    
-}
-
-static int prec_len = 20;
-
-std::string addStr2Bin(std::string A, std::string B)
-{
-    using namespace kallup;
-    using namespace std;
-       
-    BinaryCalc < string,string > calcu(A,B);
+    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::div(const T1 a, const T2 b) { return getDiv(a,b); }
     
-    stringstream tmp;
-    tmp << calcu.getResult();
-    return tmp.str();
+    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::add() { return getAdd(LHA.str(),LHB.str()); }
+    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::sub() { return getSub(LHA.str(),LHB.str()); }
+    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::mul() { return getMul(LHA.str(),LHB.str()); }
+    template <class T1, typename T2, uint32_t max> string BinaryCalc<T1,T2,max>::div() { return getDiv(LHA.str(),LHB.str()); }
 }
 
+#ifdef TEST
+// test funktion helper
 inline void put_str1(char t1, std::string t2)
 {
     using namespace std;
@@ -243,28 +295,29 @@ int main(int argc, char **argv)
 {
     using namespace std;
     using namespace kallup;
-    cout << endl << "binäres rechnen (c) 2020 Jens Kallup"
-         << endl << "Argumente:"
-         << endl << "arg1: add | sub | mul | div"
-         << endl << "arg2: nummer1"
-         << endl << "arg3: nummer2"
-         << endl << endl;
+    cout << endl << "binäres rechnen (c) 2020 Jens Kallup" << endl;
     
     if (argc < 3) {
         cout << "Argumentliste für Programmstart falsch !"  << endl
              << "Benutzung wie folgt:"                      << endl
-             << "bin.exe <op> <Zahl1> <Zahl2>"              << endl
+             << "bin.exe <arg1> <arg2> <arg3>"              << endl
                                                             << endl
+             << "Argumente:"                                << endl
+             << "arg1: add | sub | mul | div"               << endl
+             << "arg2: nummer1"
+             << "arg3: nummer2"                             << endl
+                                                            << endl                                                            
              << "Programm wird beendet."                    << endl;
         return 1;
     }
     
     string arg1 = argv[1];
+    string _bs  = "binäres ";
     
-    if (arg1 == "add") { math_op = '+'; cout << "binäre Addition ";       } else
-    if (arg1 == "sub") { math_op = '-'; cout << "binäre Subtrahieren ";   } else
-    if (arg1 == "mul") { math_op = '*'; cout << "binäre Multiplizieren "; } else
-    if (arg1 == "div") { math_op = '/'; cout << "binäre Dividieren ";     } else
+    if (arg1 == "add") { math_op = '+'; cout << _bs << "addieren ";       } else
+    if (arg1 == "sub") { math_op = '-'; cout << _bs << "subtrahieren ";   } else
+    if (arg1 == "mul") { math_op = '*'; cout << _bs << "multiplizieren "; } else
+    if (arg1 == "div") { math_op = '/'; cout << _bs << "dividieren ";     } else
     {
         cout << "Achtung: argument 1 wurde nicht erkannt !" << endl
              << "Programm wird beendet.";
@@ -275,23 +328,32 @@ int main(int argc, char **argv)
     
     string bs_A = str2bin(argv[2]);
     string bs_B = str2bin(argv[3]);
-   
-    cout << " A (hex)  = " << hex << argv[2] << " --> 0x" << hex << argv[2] << std::endl
-         << " B (hex)  = " << hex << argv[3] << " --> 0x" << hex << argv[3] << std::endl
+    string bs_C ;
+    
+    BinaryCalc < string,string > calcu(bs_A,bs_B);
+    switch (math_op) {
+        case '+': bs_C = calcu.add(); break;
+        case '-': bs_C = calcu.sub(); break;
+        case '*': bs_C = calcu.mul(); break;
+        case '/': bs_C = calcu.div(); break;
+    }
+
+    cout << " A (hex)  = " << hex << argv[2] << " --> 0x" << hex << argv[2] << endl
+         << " B (hex)  = " << hex << argv[3] << " --> 0x" << hex << argv[3] << endl
          << std::endl;
 
     put_str1('A',bs_A);
     put_str1('B',bs_B);
-    
+
     put_str2('-'); cout << " Ergebnis =";
     
-    string bin_sum = addStr2Bin(argv[2],argv[3]);
-    for (int s = 0; s < bin_sum.size(); ++s)
-    cout << " " << bin_sum[s];
+    for (int s = 0; s < bs_C.size(); ++s)
+    cout << " " << bs_C[s];
     cout << endl;
     
     put_str2('=');    
     
     return 0;
 }
+#endif  // TEST
 
